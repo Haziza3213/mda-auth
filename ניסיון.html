@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מערכת סינון מד"א</title>
+  <style>
+    :root {
+      --primary-bg: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d2d5f 100%);
+      --card-bg: rgba(45, 45, 95, 0.4);
+      --card-hover: rgba(60, 60, 120, 0.6);
+      --accent-blue: #4a9eff;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-primary: #ffffff;
+      --text-secondary: #c1c1e8;
+      --text-muted: #9ca3af;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --shadow-light: 0 4px 20px rgba(74, 158, 255, 0.1);
+      --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --shadow-heavy: 0 16px 64px rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--primary-bg);
+      color: var(--text-primary);
+      padding: 20px;
+      min-height: 100vh;
+      line-height: 1.6;
+      position: relative;
+      overflow-x: hidden;
+      direction: rtl; /* Ensure RTL direction for Hebrew */
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(74, 158, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .header .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .management-info {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .role-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .role-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .role-title {
+      font-weight: 600;
+      color: var(--accent-blue);
+      font-size: 0.95rem;
+    }
+
+    .role-name {
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+
+    .edit-btn {
+      background: rgba(74, 158, 255, 0.1);
+      border: 1px solid rgba(74, 158, 255, 0.3);
+      color: var(--accent-blue);
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .edit-btn:hover {
+      background: rgba(74, 158, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    .admin-panel {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .admin-controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-mode {
+      background: rgba(239, 68, 68, 0.1) !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+    }
+
+    .admin-mode .role-card {
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      padding: 30px;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 600px; /* Increased max-width for settings modal */
+      box-shadow: var(--shadow-heavy);
+      position: relative;
+      max-height: 90vh; /* Ensure modal doesn't overflow screen */
+      overflow-y: auto; /* Allow scrolling if content is too long */
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .modal input, .modal textarea {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid var(--border-color);
+      background: rgba(15, 15, 35, 0.8);
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+      resize: vertical;
+    }
+
+    .modal input:focus, .modal textarea:focus {
+      border-color: var(--accent-blue);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.1);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      color: var(--text-muted);
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .close:hover {
+      color: var(--accent-red);
+    }
+
+    /* Settings specific styles */
+    .settings-group {
+        margin-bottom: 30px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .settings-group h3 {
+        font-size: 1.2rem;
+        color: var(--accent-blue);
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .settings-item {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 15px;
+    }
+
+    .settings-item label {
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin-bottom: 5px;
+        font-size: 0.95rem;
+    }
+
+    .settings-item .range-inputs {
+        display: flex;
+        gap: 10px;
+    }
+
+    .settings-item .range-inputs input {
+        flex: 1;
+        margin-bottom: 0; /* Override default input margin */
+    }
+    .settings-item textarea {
+        min-height: 80px;
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+        font-size: 14px;
+    }
+    /* Style for color input */
+    .settings-item input[type="color"] {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 40px;
+        border: none;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .settings-item input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+    .settings-item input[type="color"]::-webkit-color-swatch {
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+    }
+    .settings-item input[type="color"]::-moz-color-swatch-wrapper {
+        padding: 0;
+    }
+    .settings-item input[type="color"]::-moz-color-swatch {
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+
+    .input-section {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-medium);
+      transition: all 0.3s ease;
+    }
+
+    .input-section:hover {
+      box-shadow: var(--shadow-heavy);
+      transform: translateY(-2px);
+    }
+
+    .input-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: block;
+      color: var(--text-secondary);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      background: rgba(15, 15, 35, 0.8);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      resize: vertical;
+      transition: all 0.3s ease;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: var(--accent-blue);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.1);
+    }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .control-group {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s ease;
+    }
+
+    .control-group:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .control-group label {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: block;
+      color: var(--text-secondary);
+    }
+
+    .control-group select,
+    .control-group input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      background: rgba(15, 15, 35, 0.8);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      appearance: none;
+    }
+
+    .control-group select {
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ffffff" stroke-width="2"%3E%3Cpolyline points="6,9 12,15 18,9"/%3E%3Csvg%3E');
+      background-repeat: no-repeat;
+      background-position: left 12px center;
+      background-size: 16px;
+      padding-left: 40px;
+    }
+
+    .control-group select:focus,
+    .control-group input[type="text"]:focus {
+      border-color: var(--accent-blue);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.1);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Adjusted for settings button */
+      gap: 15px;
+      margin-bottom: 40px;
+      align-items: center; /* Align items in the grid vertically */
+    }
+
+    .btn {
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: var(--shadow-light);
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), #3b82f6);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+      color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--accent-green), #059669);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--accent-red), #dc2626);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-indicator.warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .category-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow-medium);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .category-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    }
+
+    .category-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-heavy);
+      background: var(--card-hover);
+    }
+
+    .category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 30px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .category-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .category-count {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .category-content {
+      padding: 24px 30px;
+    }
+
+    .player-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .player-item:last-child {
+      border-bottom: none;
+    }
+
+    .player-item:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      padding: 16px 12px;
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-hours {
+      background: rgba(74, 158, 255, 0.1);
+      color: var(--accent-blue);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .no-data {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 40px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(74, 158, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent-blue);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-top: 4px;
+    }
+
+    .floating-action {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+    }
+
+    .fab {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-heavy);
+      transition: all 0.3s ease;
+      font-size: 20px;
+    }
+
+    .fab:hover {
+      transform: scale(1.1) translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .copy-success {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--accent-green);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: var(--shadow-medium);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .copy-success.show {
+      transform: translateX(0);
+    }
+
+    .footer-signature {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        direction: ltr; /* Ensure LTR for English names if desired */
+        opacity: 0.7;
+    }
+
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 10px;
+      }
+
+      .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .button-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .status-indicator {
+        text-align: center;
+      }
+
+      .category-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .player-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .input-section {
+        padding: 20px;
+      }
+
+      textarea {
+        min-height: 140px;
+        padding: 16px;
+      }
+
+      .management-info {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .role-card {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+
+      .modal-content {
+        margin: 20% auto;
+        width: 95%;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>מערכת בדיקת שעות מד"א</h1>
+  </div>
+
+  <div class="input-section">
+    <label for="input" class="input-label">הדבק כאן את הנתונים...</label>
+    <textarea id="input" placeholder="הדבק כאן את פאנל מדא על ידי ctrl + v "></textarea>
+  </div>
+
+  <div class="controls-grid">
+    <div class="control-group">
+      <label for="categoryFilter">סנן לפי קטגוריה:</label>
+      <select id="categoryFilter" onchange="process()">
+        <option value="all">כל הקטגוריות</option>
+        <option value="הנהלה">הנהלה</option>
+        <option value="קצונה שהיא לא יחידה">קצונה שהיא לא יחידה</option>
+        <option value="טקטי">טקטי</option>
+        <option value="נשר">נשר</option>
+        <option value="נמרץ">נמרץ</option>
+        <option value="אופנועים">אופנועים</option>
+        <option value="ימית">ימית</option>
+        <option value="פרמדיקים">פרמדיקים</option>
+        <option value="מע&quot;ר ת&quot;א">מע"ר ת"א</option>
+        <option value="מע&quot;ר אילת">מע"ר אילת</option>
+        <option value="לא מסווגים">לא מסווגים</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="hoursFilter">סנן לפי שעות:</label>
+      <select id="hoursFilter" onchange="process()">
+        <option value="all">כל השעות</option>
+        <option value="over12">מעל המינימום</option>
+        <option value="6to12">בין המינימום לחצי המינימום</option>
+        <option value="under6">מתחת לחצי המינימום</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="searchInput">חפש:</label>
+      <input type="text" id="searchInput" onkeyup="process()" placeholder="הקלד לחיפוש...">
+    </div>
+  </div>
+
+  <div class="button-grid">
+    <button class="btn btn-primary" onclick="process()">סנן נתונים🔍</button>
+    <button class="btn btn-secondary" id="top3Button" onclick="showTop3Players()">טופ 3 בשעות🏆</button>
+    <button class="btn btn-danger" onclick="resetFilters()"> איפוס פילטרים🗃️</button>
+    <button class="btn btn-primary" onclick="openSettingsModal()">הגדרות ⚙️</button>
+    <button class="btn btn-success" id="copyAllButton" onclick="handleCopyAll()">העתק הכל (לחץ להתחלה)</button>
+    <button class="btn btn-secondary" onclick="openSavedTabsModal()">טאבים שמורים 💾</button> <span id="copyAllStatus" class="status-indicator"></span>
+  </div>
+
+  <div id="output"></div>
+</div>
+
+<div class="footer-signature">
+    Made by jonat2han23 and _zicri_1
+</div>
+
+<div id="settingsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeSettingsModal()">&times;</span>
+    <h2 class="modal-title">הגדרות המערכת</h2>
+
+    <div class="settings-group">
+        <h3>הגדרות טווחי קטגוריות</h3>
+        <p style="color: var(--text-muted); text-align: center; margin-bottom: 15px; font-size: 0.9em;">
+            הגדר כאן את טווחי ה-Callsign (מספרי קריאה) עבור כל קטגוריה.
+            ודא שהטווחים אינם חופפים לקבלת תוצאות מדויקות.
+        </p>
+        <div id="categoryRangesSettings">
+            </div>
+        <button class="btn btn-success" style="width: 100%;" onclick="saveSettings()">שמור הגדרות טווחים</button>
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 15px;" onclick="addNewCategoryInput()">הוסף קטגוריה חדשה</button>
+    </div>
+
+    <div class="settings-group">
+        <h3>הגדרות צבעים ועיצוב</h3>
+        <p style="color: var(--text-muted); text-align: center; margin-bottom: 15px; font-size: 0.9em;">
+            שנה את צבעי המערכת הראשיים. (חלק מהשינויים דורשים רענון עמוד)
+        </p>
+        <div class="settings-item">
+            <label for="accentBlueInput">צבע הדגשה ראשי (כחול):</label>
+            <input type="color" id="accentBlueInput" value="#4a9eff">
+        </div>
+        <div class="settings-item">
+            <label for="accentPurpleInput">צבע הדגשה משני (סגול):</label>
+            <input type="color" id="accentPurpleInput" value="#8b5cf6">
+        </div>
+        <div class="settings-item">
+            <label for="accentGreenInput">צבע הצלחה (ירוק):</label>
+            <input type="color" id="accentGreenInput" value="#10b981">
+        </div>
+        <div class="settings-item">
+            <label for="accentRedInput">צבע אזהרה/שגיאה (אדום):</label>
+            <input type="color" id="accentRedInput" value="#ef4444">
+        </div>
+        <button class="btn btn-success" style="width: 100%;" onclick="saveSettings()">שמור הגדרות צבעים</button>
+    </div>
+
+
+    <div class="settings-group">
+        <h3>Callsignים מוחרגים מטופ 3</h3>
+        <p style="color: var(--text-muted); text-align: center; margin-bottom: 15px; font-size: 0.9em;">
+            הכנס רשימה מופרדת בפסיקים של Callsignים שלא ייכללו בחישוב הטופ 3.
+            (לדוגמה: 1,2,3,41,80)
+        </p>
+        <div class="settings-item">
+            <label for="excludedCallsignsInput">Callsignים מוחרגים:</label>
+            <textarea id="excludedCallsignsInput" placeholder="הכנס כאן את מספרי הקריאה המופרדים בפסיקים..."></textarea>
+        </div>
+        <button class="btn btn-success" style="width: 100%;" onclick="saveSettings()">שמור הגדרות מוחרגים</button>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn btn-danger" onclick="resetSettingsToDefault()">איפוס לברירת מחדל</button>
+      <button class="btn btn-secondary" onclick="closeSettingsModal()">סגור</button>
+    </div>
+  </div>
+</div>
+
+<div id="savedTabsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeSavedTabsModal()">&times;</span>
+    <h2 class="modal-title">טאבים שמורים</h2>
+    <div class="saved-tabs-list" id="savedTabsList">
+      </div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" onclick="saveCurrentInputAsTab()">שמור טאב נוכחי</button>
+      <button class="btn btn-secondary" onclick="closeSavedTabsModal()">סגור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DISCORD_CHAR_LIMIT = 1900;
+
+let globalMessagesToCopy = [];
+let currentMessageIndex = 0;
+let allProcessedPlayers = {};
+
+// הגדרות ברירת מחדל
+const DEFAULT_SETTINGS = {
+    categoryRanges: {
+        'הנהלה': { min: 1, max: 8 },
+        'קצונה שהיא לא יחידה': { min: 9, max: 19 },
+        'טקטי': { min: 20, max: 39 },
+        'נשר': { min: 40, max: 59 },
+        'נמרץ': { min: 60, max: 79 },
+        'אופנועים': { min: 80, max: 99 },
+        'ימית': { min: 100, max: 120 },
+        'פרמדיקים': { min: 400, max: 420 },
+        'מע"ר ת"א': { min: 421, max: 499 },
+        'מע"ר אילת': { min: 500, max: 599 }
+    },
+    excludedCallsignsForTop3: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,19,20,21,40,41,60,61,80,81,100,101",
+    themeColors: {
+        accentBlue: '#4a9eff',
+        accentPurple: '#8b5cf6',
+        accentGreen: '#10b981',
+        accentRed: '#ef4444'
+    }
+};
+
+let currentSettings = {}; // This will hold the loaded/default/saved settings
+
+// Added for Saved Tabs
+function getSavedTabs() {
+    try {
+        const savedTabs = localStorage.getItem('mdaSavedTabs');
+        return savedTabs ? JSON.parse(savedTabs) : {};
+    } catch (e) {
+        console.error("Error parsing saved tabs from localStorage, returning empty object.", e);
+        return {};
+    }
+}
+
+function setSavedTabs(tabs) {
+    localStorage.setItem('mdaSavedTabs', JSON.stringify(tabs));
+}
+
+function saveCurrentInputAsTab() {
+    const inputContent = document.getElementById('input').value;
+    if (!inputContent.trim()) {
+        alert('אין תוכן לשמירה בטאב הנוכחי.');
+        return;
+    }
+    const tabName = prompt('הכנס שם לטאב החדש:');
+    if (tabName && tabName.trim()) {
+        const savedTabs = getSavedTabs();
+        savedTabs[tabName.trim()] = inputContent;
+        setSavedTabs(savedTabs);
+        populateSavedTabsModal(); // Refresh the list
+        alert(`הטאב "${tabName.trim()}" נשמר בהצלחה!`);
+    } else {
+        alert('שם הטאב אינו יכול להיות ריק.');
+    }
+}
+
+function loadTab(tabName) {
+    const savedTabs = getSavedTabs();
+    if (savedTabs[tabName]) {
+        document.getElementById('input').value = savedTabs[tabName];
+        process();
+        closeSavedTabsModal();
+        alert(`הטאב "${tabName}" נטען בהצלחה!`);
+    } else {
+        alert('הטאב לא נמצא.');
+    }
+}
+
+function deleteTab(tabName) {
+    if (confirm(`האם אתה בטוח שברצונך למחוק את הטאב "${tabName}"?`)) {
+        const savedTabs = getSavedTabs();
+        delete savedTabs[tabName];
+        setSavedTabs(savedTabs);
+        populateSavedTabsModal(); // Refresh the list
+        alert(`הטאב "${tabName}" נמחק בהצלחה.`);
+    }
+}
+
+function openSavedTabsModal() {
+    populateSavedTabsModal();
+    document.getElementById('savedTabsModal').style.display = 'flex';
+}
+
+function closeSavedTabsModal() {
+    document.getElementById('savedTabsModal').style.display = 'none';
+}
+
+function populateSavedTabsModal() {
+    const savedTabsList = document.getElementById('savedTabsList');
+    savedTabsList.innerHTML = '';
+    const savedTabs = getSavedTabs();
+
+    if (Object.keys(savedTabs).length === 0) {
+        savedTabsList.innerHTML = '<p class="no-data">אין טאבים שמורים.</p>';
+        return;
+    }
+
+    for (const tabName in savedTabs) {
+        const tabItem = document.createElement('div');
+        tabItem.className = 'player-item'; // Re-use existing player-item style for good looks
+        tabItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);';
+
+        const tabNameSpan = document.createElement('span');
+        tabNameSpan.textContent = tabName;
+        tabNameSpan.style.flex = '1';
+        tabNameSpan.style.fontWeight = 'bold';
+        tabNameSpan.style.color = 'var(--accent-blue)';
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '10px';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'btn btn-primary';
+        loadBtn.style.cssText = 'padding: 8px 12px; font-size: 0.9em; border-radius: 8px;';
+        loadBtn.textContent = 'טען';
+        loadBtn.onclick = () => loadTab(tabName);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn-danger';
+        deleteBtn.style.cssText = 'padding: 8px 12px; font-size: 0.9em; border-radius: 8px;';
+        deleteBtn.textContent = 'מחק';
+        deleteBtn.onclick = () => deleteTab(tabName);
+
+        buttonContainer.appendChild(loadBtn);
+        buttonContainer.appendChild(deleteBtn);
+
+        tabItem.appendChild(tabNameSpan);
+        tabItem.appendChild(buttonContainer);
+        savedTabsList.appendChild(tabItem);
+    }
+}
+
+
+// פונקציה לטעינת הגדרות מ-localStorage
+function loadSettings() {
+    const savedSettings = localStorage.getItem('mdaSystemSettings');
+    if (savedSettings) {
+        try {
+            currentSettings = JSON.parse(savedSettings);
+            // Ensure all default categories are present in loaded settings, add if missing
+            for (const key in DEFAULT_SETTINGS.categoryRanges) {
+                if (!currentSettings.categoryRanges[key]) {
+                    currentSettings.categoryRanges[key] = DEFAULT_SETTINGS.categoryRanges[key];
+                }
+            }
+            // Ensure excludedCallsignsForTop3 exists
+            if (!currentSettings.excludedCallsignsForTop3) {
+                currentSettings.excludedCallsignsForTop3 = DEFAULT_SETTINGS.excludedCallsignsForTop3;
+            }
+            // Ensure themeColors exists
+            if (!currentSettings.themeColors) {
+                currentSettings.themeColors = DEFAULT_SETTINGS.themeColors;
+            }
+        } catch (e) {
+            console.error("Error parsing settings from localStorage, loading defaults.", e);
+            currentSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); // Deep copy default settings
+        }
+    } else {
+        currentSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); // Deep copy default settings
+    }
+    applyThemeColors(); // Apply colors on load
+}
+
+// פונקציה לשמירת הגדרות ל-localStorage
+function saveSettings() {
+    // Save category ranges
+    const categoryRangesElements = document.querySelectorAll('#categoryRangesSettings .settings-item');
+    const newCategoryRanges = {};
+    categoryRangesElements.forEach(item => {
+        const categoryName = item.dataset.categoryName;
+        const minInput = item.querySelector('input[name="min"]');
+        const maxInput = item.querySelector('input[name="max"]');
+        if (categoryName && minInput && maxInput) {
+            newCategoryRanges[categoryName] = {
+                min: parseInt(minInput.value, 10),
+                max: parseInt(maxInput.value, 10)
+            };
+        }
+    });
+    currentSettings.categoryRanges = newCategoryRanges;
+
+    // Save excluded callsigns
+    currentSettings.excludedCallsignsForTop3 = document.getElementById('excludedCallsignsInput').value.trim();
+
+    // Save theme colors
+    currentSettings.themeColors = {
+        accentBlue: document.getElementById('accentBlueInput').value,
+        accentPurple: document.getElementById('accentPurpleInput').value,
+        accentGreen: document.getElementById('accentGreenInput').value,
+        accentRed: document.getElementById('accentRedInput').value
+    };
+
+    localStorage.setItem('mdaSystemSettings', JSON.stringify(currentSettings));
+    alert('הגדרות נשמרו בהצלחה!');
+    closeSettingsModal();
+    applyThemeColors(); // Apply new colors immediately
+    // Re-run process to apply new settings
+    process();
+}
+
+// פונקציה לאיפוס הגדרות לברירת מחדל
+function resetSettingsToDefault() {
+    if (confirm('האם אתה בטוח שברצונך לאפס את כל ההגדרות לברירת מחדל?')) {
+        currentSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+        localStorage.removeItem('mdaSystemSettings');
+        populateSettingsModal(); // Refresh the modal with default values
+        applyThemeColors(); // Apply default colors
+        alert('הגדרות אופסו לברירת מחדל.');
+        closeSettingsModal();
+        process(); // Re-run process to apply default settings
+    }
+}
+
+// פונקציה לפתיחת מודל ההגדרות
+function openSettingsModal() {
+    populateSettingsModal();
+    document.getElementById('settingsModal').style.display = 'flex'; // Use flex to center
+}
+
+// פונקציה לסגירת מודל ההגדרות
+function closeSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+// פונקציה למילוי מודל ההגדרות בערכים נוכחיים
+function populateSettingsModal() {
+    const categoryRangesContainer = document.getElementById('categoryRangesSettings');
+    categoryRangesContainer.innerHTML = ''; // Clear previous inputs
+
+    // Populate category ranges
+    for (const categoryName in currentSettings.categoryRanges) {
+        const range = currentSettings.categoryRanges[categoryName];
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'settings-item';
+        itemDiv.dataset.categoryName = categoryName; // Store category name for saving
+
+        itemDiv.innerHTML = `
+            <label>${categoryName}:</label>
+            <div class="range-inputs">
+                <input type="number" name="min" value="${range.min}" placeholder="מינימום">
+                <input type="number" name="max" value="${range.max}" placeholder="מקסימום">
+            </div>
+            <button class="btn btn-danger" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8em;" onclick="this.closest('.settings-item').remove();">הסר</button>
+        `;
+        categoryRangesContainer.appendChild(itemDiv);
+    }
+
+    // Populate excluded callsigns textarea
+    document.getElementById('excludedCallsignsInput').value = currentSettings.excludedCallsignsForTop3;
+
+    // Populate theme colors
+    document.getElementById('accentBlueInput').value = currentSettings.themeColors.accentBlue;
+    document.getElementById('accentPurpleInput').value = currentSettings.themeColors.accentPurple;
+    document.getElementById('accentGreenInput').value = currentSettings.themeColors.accentGreen;
+    document.getElementById('accentRedInput').value = currentSettings.themeColors.accentRed;
+}
+
+// New function to add a new category input field
+function addNewCategoryInput() {
+    const categoryRangesContainer = document.getElementById('categoryRangesSettings');
+    const newCategoryName = prompt('הכנס שם לקטגוריה החדשה:');
+    if (!newCategoryName || newCategoryName.trim() === '') {
+        return;
+    }
+
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'settings-item';
+    itemDiv.dataset.categoryName = newCategoryName.trim(); // Store category name for saving
+
+    itemDiv.innerHTML = `
+        <label>${newCategoryName.trim()}:</label>
+        <div class="range-inputs">
+            <input type="number" name="min" value="0" placeholder="מינימום">
+            <input type="number" name="max" value="0" placeholder="מקסימום">
+        </div>
+        <button class="btn btn-danger" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8em;" onclick="this.closest('.settings-item').remove();">הסר</button>
+    `;
+    categoryRangesContainer.appendChild(itemDiv);
+}
+
+
+// New function to apply theme colors to CSS variables
+function applyThemeColors() {
+    const root = document.documentElement;
+    root.style.setProperty('--accent-blue', currentSettings.themeColors.accentBlue);
+    root.style.setProperty('--accent-purple', currentSettings.themeColors.accentPurple);
+    root.style.setProperty('--accent-green', currentSettings.themeColors.accentGreen);
+    root.style.setProperty('--accent-red', currentSettings.themeColors.accentRed);
+}
+
+
+function process() {
+  // Ensure settings are loaded before processing
+  loadSettings();
+
+  const rawInput = document.getElementById('input').value;
+  const selectedCategoryDisplayName = document.getElementById('categoryFilter').value;
+  const selectedHours = document.getElementById('hoursFilter').value;
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+  const lines = rawInput.trim().split('\n');
+
+  // Only re-process all players if input changed or it's the first run
+  if (Object.keys(allProcessedPlayers).length === 0 || rawInput !== localStorage.getItem('lastRawInput')) {
+    allProcessedPlayers = {};
+    const uniquePlayersInitialPass = new Map(); // Use a Map to track unique players based on Discord ID or IC Name
+
+    lines.forEach(line => {
+      const parts = line.split('\t');
+      if (parts.length < 8) {
+        console.warn('Skipping malformed line (less than 8 parts):', line);
+        return;
+      }
+
+      const discordId = parts[1].trim();
+      const icName = parts[2].trim();
+      const weekPlayTimeRaw = parts[5].trim().replace(/^זמן שבועי:\s*/i, '');
+      const callsignRaw = parts[7].trim();
+
+      const lastNumberMatch = callsignRaw.match(/\d+$/); // Extract only the last number as Callsign
+      const callsign = lastNumberMatch ? parseInt(lastNumberMatch[0], 10) : NaN;
+      if (isNaN(callsign)) {
+        console.warn('Skipping line due to invalid Callsign:', line);
+        return;
+      }
+
+      const playerKey = discordId || icName; // Use Discord ID as primary key, fallback to IC Name
+      if (!playerKey) {
+          console.warn('Skipping line due to missing Discord ID and IC Name:', line);
+          return;
+      }
+
+      if (uniquePlayersInitialPass.has(playerKey)) {
+          console.warn('Skipping duplicate player (initial pass):', playerKey, 'from line:', line);
+          return;
+      }
+
+      let totalMinutes = 0;
+      const hoursMatch = weekPlayTimeRaw.match(/(\d+)\s*hour/);
+      const minutesMatch = weekPlayTimeRaw.match(/(\d+)\s*minute/);
+
+      if (hoursMatch && hoursMatch[1]) {
+          totalMinutes += parseInt(hoursMatch[1], 10) * 60;
+      }
+      if (minutesMatch && minutesMatch[1]) {
+          totalMinutes += parseInt(minutesMatch[1], 10);
+      }
+      const weekPlayHours = totalMinutes / 60;
+
+      const display = `${callsign} | <@${discordId}> | ${icName} | ${weekPlayTimeRaw}`;
+      uniquePlayersInitialPass.set(playerKey, display);
+
+      allProcessedPlayers[playerKey] = {
+        display: display,
+        callsign: callsign,
+        weekPlayHours: weekPlayHours,
+        discordId: discordId,
+        icName: icName
+      };
+    });
+    localStorage.setItem('lastRawInput', rawInput);
+  }
+
+  // --- Start of modified filtering and display logic ---
+  const output = document.getElementById('output');
+  output.innerHTML = ''; // Clear previous output
+  let fullOutputText = ''; // Accumulate text for "Copy All"
+
+  const isCallsignSearch = /^\d+$/.test(searchTerm); // Check if search term is purely numeric (potential callsign)
+  const searchCallsignValue = isCallsignSearch ? parseInt(searchTerm, 10) : null;
+
+  let filteredPlayers = [];
+  let targetedCategoryName = null; // To store the category name if a callsign is found
+
+  // First pass to filter players based on ALL criteria and identify category for callsign search
+  for (const playerKey in allProcessedPlayers) {
+    const player = allProcessedPlayers[playerKey];
+    const { display, callsign, weekPlayHours, discordId, icName } = player;
+
+    let passesHoursFilter = false;
+    if (selectedHours === 'all') {
+      passesHoursFilter = true;
+    } else if (selectedHours === 'over12') {
+      passesHoursFilter = weekPlayHours >= 12;
+    } else if (selectedHours === '6to12') {
+      passesHoursFilter = weekPlayHours >= 6 && weekPlayHours < 12;
+    } else if (selectedHours === 'under6') {
+      passesHoursFilter = weekPlayHours < 6;
+    }
+
+    if (!passesHoursFilter) {
+        continue;
+    }
+
+    let passesSearchFilter = true;
+    if (searchTerm) {
+        if (isCallsignSearch) {
+            passesSearchFilter = (callsign === searchCallsignValue);
+        } else {
+            // Check if search term exists in display, icName, or discordId
+            if (!display.toLowerCase().includes(searchTerm) &&
+                !icName.toLowerCase().includes(searchTerm) &&
+                !discordId.toLowerCase().includes(searchTerm)) {
+                passesSearchFilter = false;
+            }
+        }
+    }
+
+    if (!passesSearchFilter) {
+        continue;
+    }
+
+    // If we're here, the player passed hours and general search filter (if any)
+    // Now, let's assign category and handle specific callsign search display
+    let assignedCategory = 'לא מסווגים';
+    for (const catName in currentSettings.categoryRanges) {
+        const range = currentSettings.categoryRanges[catName];
+        if (callsign >= range.min && callsign <= range.max) {
+            assignedCategory = catName;
+            break;
+        }
+    }
+
+    // Add player to filtered list with their determined category
+    filteredPlayers.push({ ...player, assignedCategory: assignedCategory });
+
+    // If it's a specific callsign search and this player matches, store their category
+    if (isCallsignSearch && callsign === searchCallsignValue) {
+        targetedCategoryName = assignedCategory;
+    }
+  }
+
+  const categoriesToDisplay = {};
+
+  // Second pass: Organize filtered players into categories for display
+  filteredPlayers.forEach(player => {
+    const { display, assignedCategory } = player;
+
+    // Determine if this player/category should be displayed based on filters
+    let shouldDisplayCategory = false;
+    if (isCallsignSearch && targetedCategoryName !== null) {
+        // If searching by callsign, only display the targeted category
+        shouldDisplayCategory = (assignedCategory === targetedCategoryName);
+    } else {
+        // Otherwise, use general category filter
+        shouldDisplayCategory = (selectedCategoryDisplayName === 'all' || assignedCategory === selectedCategoryDisplayName);
+    }
+
+    if (shouldDisplayCategory) {
+        if (!categoriesToDisplay[assignedCategory]) {
+            categoriesToDisplay[assignedCategory] = [];
+        }
+        // If it's a callsign search, only add players that *exactly* match the search callsign
+        if (isCallsignSearch) {
+            if (player.callsign === searchCallsignValue) {
+                categoriesToDisplay[assignedCategory].push(display);
+            }
+        } else {
+            // Otherwise, add all players that passed filters
+            categoriesToDisplay[assignedCategory].push(display);
+        }
+    }
+  });
+
+  // Sort categories by default order or by the targeted category first
+  const sortedCategoryNames = Object.keys(currentSettings.categoryRanges).concat(['לא מסווגים']).filter(name => categoriesToDisplay[name] && categoriesToDisplay[name].length > 0 || name === targetedCategoryName);
+
+  if (isCallsignSearch && targetedCategoryName && sortedCategoryNames.includes(targetedCategoryName)) {
+      // Move targeted category to the front for callsign search
+      const index = sortedCategoryNames.indexOf(targetedCategoryName);
+      if (index > -1) {
+          const [movedCategory] = sortedCategoryNames.splice(index, 1);
+          sortedCategoryNames.unshift(movedCategory);
+      }
+  }
+
+  for (const categoryName of sortedCategoryNames) {
+    const items = categoriesToDisplay[categoryName] || []; // Get players for this category (or empty array if none)
+
+    // Only display the category if it has items OR if it's the specific targeted category from a callsign search
+    // This ensures an empty category for a callsign search if the callsign exists but has no playtime.
+    if (items.length > 0 || (isCallsignSearch && categoryName === targetedCategoryName)) { // Modified condition here
+      const container = document.createElement('div');
+      container.className = 'category-card';
+
+      const header = document.createElement('div');
+      header.className = 'category-header';
+
+      const title = document.createElement('h2');
+      title.className = 'category-title';
+      title.textContent = categoryName;
+
+      const count = document.createElement('span');
+      count.className = 'category-count';
+      count.textContent = items.length;
+
+      title.appendChild(count);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn-primary';
+      copyBtn.textContent = 'העתק';
+      copyBtn.onclick = () => {
+        let txt = categoryName + '\n' + items.join('\n');
+        navigator.clipboard.writeText(txt)
+          .then(() => alert('הועתק בהצלחה!'))
+          .catch(err => console.error('שגיאת העתקה:', err));
+      };
+
+      header.appendChild(title);
+      header.appendChild(copyBtn);
+
+      const content = document.createElement('div');
+      content.className = 'category-content';
+
+      const categoryContent = items.length > 0
+        ? items.map(item => `<div class="player-item"><span class="player-info">${item}</span></div>`).join('')
+        : '<p class="no-data">אין נתונים עבור קטגוריה זו (או שה-Callsign לא נמצא/מתאים לפילטרים).</p>';
+
+      content.innerHTML = categoryContent;
+
+      container.appendChild(header);
+      container.appendChild(content);
+      output.appendChild(container);
+
+      // Add to full output text for "Copy All"
+      fullOutputText += `**${categoryName}**\n`;
+      if (items.length > 0) {
+        fullOutputText += items.join('\n') + '\n\n';
+      } else {
+        fullOutputText += 'אין נתונים.\n\n';
+      }
+    }
+  }
+  // --- End of modified filtering and display logic ---
+
+
+  globalMessagesToCopy = splitTextIntoChunks(fullOutputText.trim(), DISCORD_CHAR_LIMIT);
+  currentMessageIndex = 0;
+
+  const copyAllButton = document.getElementById('copyAllButton');
+  const statusSpan = document.getElementById('copyAllStatus');
+
+  if (globalMessagesToCopy.length > 0) {
+    copyAllButton.textContent = `העתק הודעה 1 מתוך ${globalMessagesToCopy.length}`;
+    statusSpan.textContent = '';
+    copyAllButton.disabled = false;
+    statusSpan.classList.remove('warning');
+  } else {
+    copyAllButton.textContent = 'אין נתונים להעתקה';
+    statusSpan.textContent = '';
+    copyAllButton.disabled = true;
+    statusSpan.classList.add('warning');
+  }
+}
+
+function splitTextIntoChunks(text, limit) {
+  const chunks = [];
+  let currentChunk = '';
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    if ((currentChunk.length + line.length + 1) > limit && currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+      currentChunk = '';
+    }
+
+    if (line.length > limit) {
+        chunks.push(line);
+    } else {
+        currentChunk += line + '\n';
+    }
+  }
+  if (currentChunk.trim().length > 0) {
+    chunks.push(currentChunk.trim());
+  }
+  return chunks;
+}
+
+async function handleCopyAll() {
+  const copyAllButton = document.getElementById('copyAllButton');
+  const statusSpan = document.getElementById('copyAllStatus');
+
+  if (globalMessagesToCopy.length === 0) {
+    alert('אין נתונים להעתקה. אנא סנן את הנתונים קודם.');
+    statusSpan.textContent = 'אין נתונים להעתקה.';
+    statusSpan.classList.add('warning');
+    return;
+  }
+
+  if (currentMessageIndex < globalMessagesToCopy.length) {
+    const messageToCopy = globalMessagesToCopy[currentMessageIndex];
+
+    try {
+      await navigator.clipboard.writeText(messageToCopy);
+      statusSpan.textContent = `הודעה ${currentMessageIndex + 1} מתוך ${globalMessagesToCopy.length} הועתקה! הדבק בדיסקורד.`;
+      statusSpan.classList.remove('warning');
+
+
+      currentMessageIndex++;
+
+      if (currentMessageIndex < globalMessagesToCopy.length) {
+        copyAllButton.textContent = `העתק הודעה ${currentMessageIndex + 1} מתוך ${globalMessagesToCopy.length}`;
+      } else {
+        copyAllButton.textContent = 'סיים העתקה (לחץ לאיפוס)';
+        statusSpan.textContent = 'כל ההודעות הועתקו ללוח. הדבק אותן בדיסקורד.';
+        alert('בדיקת המינימום בוצע בהצלחה והודבקה ללוח אנא שלח אות');
+      }
+    } catch (err) {
+      console.error('שגיאת העתקה:', err);
+      statusSpan.textContent = 'שגיאה בהעתקה. ודא שאפשרות העתקה מופעלת בדפדפן.';
+      statusSpan.classList.add('warning');
+      alert('שגיאה בהעתקה. ודא שאפשרות העתקה מופעלת בדפדפן.');
+    }
+  } else {
+    currentMessageIndex = 0;
+    process();
+    statusSpan.textContent = '';
+    statusSpan.classList.remove('warning');
+    alert('המערכת אותחלה. ניתן להעתיק שוב.');
+  }
+}
+
+function showTop3Players() {
+    const output = document.getElementById('output');
+    output.innerHTML = '';
+
+    let eligiblePlayers = [];
+
+    // Parse excluded callsigns from string to array of numbers
+    const excludedCallsignsArray = currentSettings.excludedCallsignsForTop3
+                                    .split(',')
+                                    .map(s => parseInt(s.trim(), 10))
+                                    .filter(n => !isNaN(n));
+
+    for (const playerKey in allProcessedPlayers) {
+        const player = allProcessedPlayers[playerKey];
+        const { callsign, weekPlayHours } = player;
+
+        // Check if the player's Callsign is in the excluded list
+        const isExcluded = excludedCallsignsArray.includes(callsign);
+
+        if (!isExcluded) { // Only include if not excluded
+            eligiblePlayers.push(player);
+        }
+    }
+
+    eligiblePlayers.sort((a, b) => b.weekPlayHours - a.weekPlayHours);
+
+    const top3 = eligiblePlayers.slice(0, 3);
+
+    const container = document.createElement('div');
+    container.className = 'category-card';
+
+    const header = document.createElement('div');
+    header.className = 'category-header';
+
+    const title = document.createElement('h2');
+    title.className = 'category-title';
+    title.textContent = 'טופ 3 בשעות (ללא מוחרגים)'; // Changed title for clarity
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn btn-primary';
+    copyBtn.textContent = 'העתק';
+    copyBtn.onclick = () => {
+        let txt = title.textContent + '\n';
+        if (top3.length > 0) {
+            txt += top3.map(p => p.display).join('\n');
+        } else {
+            txt += 'אין נתונים עבור טופ 3.';
+        }
+        navigator.clipboard.writeText(txt)
+            .then(() => alert('הועתק בהצלחה!'))
+            .catch(err => console.error('שגיאת העתקה:', err));
+    };
+
+    header.appendChild(title);
+    header.appendChild(copyBtn);
+
+    const content = document.createElement('div');
+    content.className = 'category-content';
+
+    if (top3.length > 0) {
+        top3.forEach((player, index) => {
+            const p = document.createElement('div');
+            p.className = 'player-item';
+            p.innerHTML = `<span class="player-info">${index + 1}. ${player.display}</span> <span class="player-hours">${player.weekPlayHours.toFixed(1)} שעות</span>`;
+            content.appendChild(p);
+        });
+    } else {
+        const p = document.createElement('p');
+        p.className = 'no-data';
+        p.textContent = 'אין נתונים מתאימים עבור טופ 3.';
+        content.appendChild(p);
+    }
+
+    container.appendChild(header);
+    container.appendChild(content);
+    output.appendChild(container);
+}
+
+function resetFilters() {
+    document.getElementById('categoryFilter').value = 'all';
+    document.getElementById('hoursFilter').value = 'all';
+    document.getElementById('searchInput').value = '';
+    process();
+}
+
+// Ensure settings are loaded when the DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings(); // Load settings first
+    process(); // Then process initial data
+});
+
+</script>
+
+</body>
+</html>
